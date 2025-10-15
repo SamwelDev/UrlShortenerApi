@@ -13,7 +13,7 @@ namespace UrlShortener_Infrastructure.Infrastructure_Commons
     {   public ShortenerDbContext CreateDbContext(string[] args)
         {
             var _optBuilder = new DbContextOptionsBuilder<ShortenerDbContext>();
-            _optBuilder.UseSqlServer("Your_Connection_String_Here");
+            _optBuilder.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;;Database=ShortnerDbContext-v0.1;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=true");
             return new ShortenerDbContext(_optBuilder.Options);
         }
     }

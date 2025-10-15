@@ -1,0 +1,7 @@
+﻿ADD-MIGRATIONS
+dotnet ef migrations add Initial --startup-project UrlShortener_Api --project UrlShortener_Infrastructure
+
+
+
+UPDATE-DB
+dotnet ef database update --startup-project UrlShortener_Api --project UrlShortener_Infrastructure
