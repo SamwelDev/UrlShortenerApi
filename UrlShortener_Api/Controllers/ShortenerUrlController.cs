@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using UrlShortener_Application.Application_DTOs.DTOs_Othres;
 using UrlShortener_Application.Application_Services.Generic_Service;
 using UrlShortener_Domain.Domain_Models;
@@ -17,22 +18,25 @@ namespace UrlShortener_Api.Controllers
             _urlService = urlService;
             _logger = logger;
         }
-
-        [HttpGet("all")]
+        [EnableRateLimiting("Rate-Policy")]
+        [HttpGet]
+        [Route("get-All-url")]
         public async Task<IActionResult> GetAll()
         {
             var response = await _urlService.GetAllAsync();
             return Ok(response);
         }
-
-        [HttpGet("GetById")]
+        [EnableRateLimiting("Rate-Policy")]
+        [HttpGet]
+        [Route("get-by-Id")]
         public async Task<IActionResult> GetById(int id)
         {
             var response = await _urlService.GetByIdAsync(id);
             return Ok(response);
         }
-
-        [HttpGet("{code}")]
+        [EnableRateLimiting("")]
+        [HttpGet]
+        [Route("{code}")]
         public async Task<IActionResult> RedirectToOriginal(string code)
         {
             var response = await _urlService.FindAsync(x => x.ShortCode == code);
@@ -43,8 +47,9 @@ namespace UrlShortener_Api.Controllers
             var originalUrl = response.Data.First().OriginalUrl;
             return Redirect(originalUrl);
         }
-
-        [HttpPost("shorten")]
+        [EnableRateLimiting("Shorten-Policy")]
+        [HttpPost]
+        [Route("try-shorten")]
         public async Task<IActionResult> ShortenUrl([FromBody] string originalUrl)
         {
             if (string.IsNullOrWhiteSpace(originalUrl))
@@ -78,7 +83,7 @@ namespace UrlShortener_Api.Controllers
 
         private string GenerateShortCode()
         {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            const string chars = "ABCDEFGHIMWAMAKULAJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
             var random = new Random();
             return new string(Enumerable.Repeat(chars, 6)
                 .Select(s => s[random.Next(s.Length)]).ToArray());

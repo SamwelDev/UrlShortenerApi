@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Scalar.AspNetCore;
 using UrlShortener_Infrastructure.Infrastructure_Commons;
 
@@ -24,11 +26,38 @@ try
     // OpenAPI
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddOpenApi();
-    builder.Services.AddContextDI(
-        builder.Configuration,
-        builder.Environment,
-        logger
-    );
+    builder.Services.AddContextDI(builder.Configuration,builder.Environment,logger);
+    // Rate limiter ..
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.AddFixedWindowLimiter("Rate-Policy", limiter =>
+        {
+            limiter.Window = TimeSpan.FromMinutes(8);
+            limiter.PermitLimit = 100;
+            limiter.QueueLimit = 0;
+            limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        });
+
+        options.AddPolicy("Shorten-Policy", httpContext =>
+        {
+            var clientIp =
+                httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown";
+
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: clientIp,
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                });
+        });
+
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    });
+
 
     var app = builder.Build();
 
@@ -69,6 +98,7 @@ try
     }
 
     app.UseHttpsRedirection();
+    app.UseRateLimiter();
     app.UseAuthorization();
     app.MapControllers();
     logger.LogInformation("Shortener API is up and running");
@@ -76,10 +106,7 @@ try
 }
 catch (Exception ex)
 {
-    logger.LogCritical(
-        ex,
-        "Shortener API failed to start due to a fatal error."
-    );
+    logger.LogCritical(ex,"Shortener API failed to start due to a fatal error.");
 
     throw;
 }
